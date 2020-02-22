@@ -78,6 +78,7 @@ jobs:
       - setup_remote_docker
       - docker_prerequisites
       - docker_compose
+      - wait_for_postgres
       - bundle_install
       - test
 
