@@ -1,0 +1,81 @@
+docker_image: &docker_image
+  image: circleci/ruby:2.6.5-node
+
+version: 2.1
+commands:
+  bundle_install:
+    description: "Performs the bundler installation, relying on the CircleCI cache for performance"
+    steps:
+      - restore_cache:
+          keys:
+            - bundler-cache-{{ checksum "Gemfile.lock" }}
+      - run:
+          name: "Bundle Install"
+          command: bundle install --path=.bundle
+      - save_cache:
+          key: bundler-cache-{{ checksum "Gemfile.lock" }}
+          paths:
+            - .bundle
+  docker_prerequisites:
+    description: "Run docker compose prerequisites that should eventually be folded into a base image"
+    steps:
+      - run:
+          name: Install Docker client
+          command: |
+            set -x
+            VER="17.03.0-ce"
+            curl -L -o /tmp/docker-$VER.tgz https://get.docker.com/builds/Linux/x86_64/docker-$VER.tgz
+            tar -xz -C /tmp -f /tmp/docker-$VER.tgz
+            mv /tmp/docker/* /usr/bin
+      - run:
+          name: Install Docker Compose
+          command: |
+            set -x
+            curl -L https://github.com/docker/compose/releases/download/1.11.2/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+  docker_compose:
+    description: "Start the docker containers and ensure they are running"
+    steps:
+      - run:
+          name: "Run docker-compose"
+          command: |
+            set -x
+            docker-compose up -d
+  wait_for_postgres:
+    description: "Wait to make sure the database is running"
+    steps:
+      - run:
+          name: "Waiting for Postgres to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 5432 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Postgress && exit 1
+  test:
+    steps:
+      - run:
+          name: "Test Suite"
+          command: |
+            set -ou pipefail
+            cc-test-reporter before-build
+            bin/rails test
+            cc-test-reporter after-build
+
+jobs:
+  build:
+    working_directory: ~/voices-of-consent
+    docker:
+      - <<: *docker_image
+        environment:
+          RAILS_ENV: test
+    steps:
+      - checkout
+      - setup_remote_docker
+      - docker_prerequisites
+      - docker_compose
+      - wait_for_postgres
+      - bundle_install
+      - test
