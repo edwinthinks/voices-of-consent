@@ -61,9 +61,9 @@ commands:
           name: "Test Suite"
           command: |
             set -ou pipefail
-            cc-test-reporter before-build
-            bin/rails test
-            cc-test-reporter after-build
+            mv config/database.yml.example config/database.yml
+            bundle exec rspec
+
 
 
 jobs:
