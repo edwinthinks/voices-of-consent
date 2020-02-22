@@ -65,8 +65,9 @@ commands:
             bin/rails test
             cc-test-reporter after-build
 
+
 jobs:
-  build:
+  tests:
     working_directory: ~/voices-of-consent
     docker:
       - <<: *docker_image
@@ -80,3 +81,9 @@ jobs:
       - wait_for_postgres
       - bundle_install
       - test
+
+workflows:
+  version: 2.1
+  voices_of_consent:
+    jobs:
+      - tests
