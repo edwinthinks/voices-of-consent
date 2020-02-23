@@ -64,18 +64,12 @@ commands:
             mv config/database.yml.example config/database.yml
             bundle exec rspec
 
-
-
 jobs:
   tests:
     working_directory: ~/voices-of-consent
-    docker:
-      - <<: *docker_image
-        environment:
-          RAILS_ENV: test
+    machine: true
     steps:
       - checkout
-      - setup_remote_docker
       - docker_prerequisites
       - docker_compose
       - wait_for_postgres
